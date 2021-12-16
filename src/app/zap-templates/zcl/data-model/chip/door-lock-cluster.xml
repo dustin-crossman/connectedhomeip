@@ -187,10 +187,10 @@ limitations under the License.
             <access op="write" role="administer" />
         </attribute>
         <!-- Conformance feature COTA & PIN - for now optional -->
-        <attribute side="server" code="51" define="REQUIRE_PIN_FOR_REMOTE_OPERATION" type="boolean" reportable="true" default="0" writable="true" optional="true">
+        <attribute side="server" code="51" define="REQUIRE_PIN_FOR_REMOTE_OPERATION" type="boolean" reportable="true" default="1" writable="true">
             <description>RequirePINforRemoteOperation</description>
             <access op="read" role="view" />
-            <access op="write" role="administer" />
+            <access op="write" role="manage" />
         </attribute>
         <!-- Attribute SecurityLevel with code 52 is deprecated -->
         <!-- Conformance feature [USR] - for now optional -->

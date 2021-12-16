@@ -13914,7 +13914,7 @@ class DoorLock(Cluster):
                 ClusterObjectFieldDescriptor(Label="wrongCodeEntryLimit", Tag=0x00000030, Type=typing.Optional[uint]),
                 ClusterObjectFieldDescriptor(Label="userCodeTemporaryDisableTime", Tag=0x00000031, Type=typing.Optional[uint]),
                 ClusterObjectFieldDescriptor(Label="sendPINOverTheAir", Tag=0x00000032, Type=typing.Optional[bool]),
-                ClusterObjectFieldDescriptor(Label="requirePINforRemoteOperation", Tag=0x00000033, Type=typing.Optional[bool]),
+                ClusterObjectFieldDescriptor(Label="requirePINforRemoteOperation", Tag=0x00000033, Type=bool),
                 ClusterObjectFieldDescriptor(Label="expiringUserTimeout", Tag=0x00000035, Type=typing.Optional[uint]),
                 ClusterObjectFieldDescriptor(Label="alarmMask", Tag=0x00000040, Type=typing.Optional[uint]),
                 ClusterObjectFieldDescriptor(Label="keypadOperationEventMask", Tag=0x00000041, Type=typing.Optional[uint]),
@@ -13964,7 +13964,7 @@ class DoorLock(Cluster):
     wrongCodeEntryLimit: 'typing.Optional[uint]' = None
     userCodeTemporaryDisableTime: 'typing.Optional[uint]' = None
     sendPINOverTheAir: 'typing.Optional[bool]' = None
-    requirePINforRemoteOperation: 'typing.Optional[bool]' = None
+    requirePINforRemoteOperation: 'bool' = None
     expiringUserTimeout: 'typing.Optional[uint]' = None
     alarmMask: 'typing.Optional[uint]' = None
     keypadOperationEventMask: 'typing.Optional[uint]' = None
@@ -15577,9 +15577,9 @@ class DoorLock(Cluster):
 
             @ChipUtility.classproperty
             def attribute_type(cls) -> ClusterObjectFieldDescriptor:
-                return ClusterObjectFieldDescriptor(Type=typing.Optional[bool])
+                return ClusterObjectFieldDescriptor(Type=bool)
 
-            value: 'typing.Optional[bool]' = None
+            value: 'bool' = False
 
         @dataclass
         class ExpiringUserTimeout(ClusterAttributeDescriptor):

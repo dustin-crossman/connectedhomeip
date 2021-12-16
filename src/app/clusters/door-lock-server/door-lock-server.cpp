@@ -87,14 +87,12 @@ bool DoorLockServer::SetLockState(chip::EndpointId endpointId, DlLockState newLo
 
 bool DoorLockServer::SetActuatorEnabled(chip::EndpointId endpointId, bool newActuatorState)
 {
-    auto actuatorState = static_cast<uint8_t>(newActuatorState);
+    emberAfDoorLockClusterPrintln("Setting Actuator Enabled State to '%hhu'", newActuatorState);
 
-    emberAfDoorLockClusterPrintln("Setting Actuator Enabled State to '%hhu'", actuatorState);
-
-    auto status = Attributes::ActuatorEnabled::Set(endpointId, actuatorState);
+    auto status = Attributes::ActuatorEnabled::Set(endpointId, newActuatorState);
     if (status != EMBER_ZCL_STATUS_SUCCESS)
     {
-        ChipLogError(Zcl, "Unable to set the Actuator Enabled State to %hhu: internal error", actuatorState);
+        ChipLogError(Zcl, "Unable to set the Actuator Enabled State to %hhu: internal error", newActuatorState);
     }
 
     return status == EMBER_ZCL_STATUS_SUCCESS;
@@ -115,21 +113,33 @@ bool DoorLockServer::SetDoorState(chip::EndpointId endpointId, DlLockState newDo
     return status == EMBER_ZCL_STATUS_SUCCESS;
 }
 
-bool DoorLockServer::SetLanguage(chip::EndpointId endpointId, const char * newLanguage)
+bool DoorLockServer::SetLanguage(chip::EndpointId endpointId, chip::CharSpan newLanguage)
 {
-    return true;
+    // TODO: Replace hardcoded length with constant for max language length (if one exists).
+    // Max length is 3 (+1 for \0)
+    char language_str[4];
+    strncpy(&language_str[0], newLanguage.begin(), 3);
+    language_str[3] = '\0';
+
+    emberAfDoorLockClusterPrintln("Setting Language State to '%s'", &language_str[0]);
+
+    auto status = Attributes::Language::Set(endpointId, newLanguage);
+    if (status != EMBER_ZCL_STATUS_SUCCESS)
+    {
+        ChipLogError(Zcl, "Unable to set the Langauge to %s: internal error", &language_str[0]);
+    }
+
+    return status == EMBER_ZCL_STATUS_SUCCESS;
 }
 
 bool DoorLockServer::SetAutoRelockTime(chip::EndpointId endpointId, uint32_t newAutoRelockTimeSec)
 {
-    auto autoRelockTimeSec = static_cast<uint8_t>(newAutoRelockTimeSec);
-
-    emberAfDoorLockClusterPrintln("Setting Auto Relock Time to '%hhu'", autoRelockTimeSec);
-    auto status = Attributes::AutoRelockTime::Set(endpointId, autoRelockTimeSec);
+    emberAfDoorLockClusterPrintln("Setting Auto Relock Time to '%u'", newAutoRelockTimeSec);
+    auto status = Attributes::AutoRelockTime::Set(endpointId, newAutoRelockTimeSec);
 
     if (status != EMBER_ZCL_STATUS_SUCCESS)
     {
-        ChipLogError(Zcl, "Unable to set the Auto Relock Time to %hhu: internal error", autoRelockTimeSec);
+        ChipLogError(Zcl, "Unable to set the Auto Relock Time to %u: internal error", newAutoRelockTimeSec);
     }
 
     return status == EMBER_ZCL_STATUS_SUCCESS;
@@ -137,17 +147,41 @@ bool DoorLockServer::SetAutoRelockTime(chip::EndpointId endpointId, uint32_t new
 
 bool DoorLockServer::SetSoundVolume(chip::EndpointId endpointId, uint8_t newSoundVolume)
 {
-    return true;
+    emberAfDoorLockClusterPrintln("Setting Sound Volume to '%hhu'", newSoundVolume);
+
+    auto status = Attributes::SoundVolume::Set(endpointId, newSoundVolume);
+    if (status != EMBER_ZCL_STATUS_SUCCESS)
+    {
+        ChipLogError(Zcl, "Unable to set the Sound Volume to %hhu: internal error", newSoundVolume);
+    }
+
+    return status == EMBER_ZCL_STATUS_SUCCESS;
 }
 
 bool DoorLockServer::SetOneTouchLocking(chip::EndpointId endpointId, bool isEnabled)
 {
-    return true;
+    emberAfDoorLockClusterPrintln("Setting One Touch Locking to '%hhu'", isEnabled);
+
+    auto status = Attributes::EnableOneTouchLocking::Set(endpointId, isEnabled);
+    if (status != EMBER_ZCL_STATUS_SUCCESS)
+    {
+        ChipLogError(Zcl, "Unable to set the One Touch Locking to %hhu: internal error", isEnabled);
+    }
+
+    return status == EMBER_ZCL_STATUS_SUCCESS;
 }
 
 bool DoorLockServer::SetPrivacyModeButton(chip::EndpointId endpointId, bool isEnabled)
 {
-    return true;
+    emberAfDoorLockClusterPrintln("Setting Privacy Mode Enabled to '%hhu'", isEnabled);
+
+    auto status = Attributes::EnablePrivacyModeButton::Set(endpointId, isEnabled);
+    if (status != EMBER_ZCL_STATUS_SUCCESS)
+    {
+        ChipLogError(Zcl, "Unable to set the Privacy Mode Enabled to %hhu: internal error", isEnabled);
+    }
+
+    return status == EMBER_ZCL_STATUS_SUCCESS;
 }
 
 // =======================================================
@@ -156,13 +190,28 @@ bool emberAfDoorLockClusterLockDoorCallback(chip::app::CommandHandler * commandO
                                             const chip::app::ConcreteCommandPath & commandPath,
                                             const chip::app::Clusters::DoorLock::Commands::LockDoor::DecodableType & commandData)
 {
+    // TODO: Implement handling for ActuatorEnabled, OperatingMode, AutoRelockTime, WrongCodeEntryLimit, etc
     emberAfDoorLockClusterPrintln("Received Lock Door command");
     bool success = false;
 
     chip::EndpointId endpoint = commandPath.mEndpointId;
 
+    // TODO: Doesn't seem to be writable by chip-tool. Figure out why.
     bool require_pin = false;
     Attributes::RequirePINforRemoteOperation::Get(endpoint, &require_pin);
+
+    uint8_t wrong_code_entry_limit = 0;
+    Attributes::WrongCodeEntryLimit::Get(endpoint, &wrong_code_entry_limit);
+
+    bool actuator_enabled = false;
+    Attributes::ActuatorEnabled::Get(endpoint, &actuator_enabled);
+
+    if(!actuator_enabled)
+    {
+        emberAfSendImmediateDefaultResponse(success ? EMBER_ZCL_STATUS_SUCCESS : EMBER_ZCL_STATUS_FAILURE);
+
+        return false;
+    }
 
     if (commandData.pinCode.HasValue())
     {
@@ -174,6 +223,7 @@ bool emberAfDoorLockClusterLockDoorCallback(chip::app::CommandHandler * commandO
         else
         {
             success = false; // Just to be explicit. success == false at this point anyway
+            wrong_code_entry_limit++;
         }
     }
     else
@@ -185,8 +235,11 @@ bool emberAfDoorLockClusterLockDoorCallback(chip::app::CommandHandler * commandO
         else
         {
             success = false;
+            wrong_code_entry_limit++;
         }
     }
+
+    Attributes::WrongCodeEntryLimit::Set(endpoint, wrong_code_entry_limit);
 
     if (success)
     {
@@ -202,6 +255,7 @@ bool emberAfDoorLockClusterUnlockDoorCallback(
     chip::app::CommandHandler * commandObj, const chip::app::ConcreteCommandPath & commandPath,
     const chip::app::Clusters::DoorLock::Commands::UnlockDoor::DecodableType & commandData)
 {
+    // TODO: Implement handling for ActuatorEnabled, MinPINCodeLength (just check), MaxPINCodeLength (just check), OperatingMode, AutoRelockTime, WrongCodeEntryLimit, etc
     emberAfDoorLockClusterPrintln("Received Unlock Door command");
     bool success = false;
 
